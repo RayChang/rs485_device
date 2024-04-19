@@ -1,22 +1,39 @@
-## RS-485
+# RS-485 for Home Assistant
 
-透過 rs-485 to tcp 裝置控制特定的 rs-485 裝置
+Integrate specific RS-485 devices into Home Assistant via an RS-485 to TCP device.
 
-目前僅支援：
-- rs-485 開關 LP-F8
-- 杜亞窗簾電機 CMD82-5S
+## Installation
 
-使用方式：
-- 輸入 rs-485 to tcp 的 ip 位置與 port
-- 選擇要加入的裝置類型
-  - 繼電器開關
-    - 裝置名稱
-    - 從機位置(10進位)
-    - 按鍵數量
-    - 是否包含繼電器(強電)
-  - 窗簾電機
-    - 裝置名稱
-    - 從機位置(10進位)
-    預設位置為 0x12 0x34 所以要輸入 4660
+### HACS
 
-目前功能只開發必要功能，還有很多功能尚未實現
+This is the recommended method of installation.
+
+1. Add this repository as a custom repository in HACS.
+2. Search for and install the RS-485 Device integration from HACS.
+3. Restart Home Assistant.
+
+## Setup
+
+From the Home Assistant Integrations page, search for and add the RS-485 Device integration.
+
+## Specification
+
+### Currently supports:
+- RS-485 switch LP-F8
+- Dooya curtain motor CMD82-5S
+
+### How to use:
+
+1. Enter the IP address and port of the RS-485 to TCP device.
+2. Choose the type of device to add:
+    - Switch
+      - Device name
+      - Slave address (decimal)
+      - Number of buttons
+      - Includes a relay for high voltage control
+    -Curtain motor
+      - Device name
+      - Slave address (decimal)
+      Default address is 0x12 0x34, so enter 4660.
+
+Currently, only essential features have been developed; many functionalities are still to be implemented.
