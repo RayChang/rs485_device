@@ -1,0 +1,29 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Device is already configured"
+        },
+        "error": {
+            "entity_id_error": "entity_id_error",
+            "missing_input": "missing_input",
+            "unknown": "Unexpected error"
+        },
+        "step": {
+            "device_config": {
+                "data": {
+                    "count": "count",
+                    "has_relay": "has_relay",
+                    "name": "Name",
+                    "slave": "slave"
+                }
+            },
+            "user": {
+                "data": {
+                    "device": "Device",
+                    "host": "Host",
+                    "port": "Port"
+                }
+            }
+        }
+    }
+}

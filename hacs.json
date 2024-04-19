@@ -1,0 +1,5 @@
+{
+  "name": "RS-485 Device",
+  "homeassistant": "2024.4.3",
+  "render_readme": true
+}

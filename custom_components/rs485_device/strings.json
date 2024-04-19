@@ -1,0 +1,29 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "host": "[%key:common::config_flow::data::host%]",
+          "port": "[%key:common::config_flow::data::port%]",
+          "device": "[%key:common::config_flow::data::device%]"
+        }
+      },
+      "device_config": {
+        "data": {
+          "name": "[%key:common::config_flow::data::name%]",
+          "slave": "slave",
+          "count": "count",
+          "has_relay": "has_relay"
+        }
+      }
+    },
+    "error": {
+      "entity_id_error": "entity_id_error",
+      "missing_input": "missing_input",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+    }
+  }
+}

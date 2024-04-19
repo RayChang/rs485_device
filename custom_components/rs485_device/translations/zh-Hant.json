@@ -1,0 +1,29 @@
+{
+  "config": {
+    "abort": {
+        "already_configured": "設備已配置"
+    },
+    "error": {
+        "entity_id_error": "無法建構實體 ID",
+        "missing_input": "缺少輸入",
+        "unknown": "未知錯誤"
+    },
+      "step": {
+          "user": {
+              "data": {
+                  "host": "RS-485 to TCP IP 位置",
+                  "port": "RS-485 to TCP IP 連接埠",
+                  "device": "選擇裝置類型"
+              }
+            },
+            "device_config": {
+                "data": {
+                    "name": "裝置名稱",
+                    "slave": "開關從機位置",
+                    "count": "開關鍵數",
+                    "has_relay": "是否有繼電器"
+                }
+            }
+      }
+  }
+}
