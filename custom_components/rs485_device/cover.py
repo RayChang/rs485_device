@@ -1,5 +1,4 @@
 """RS485 Curtain component."""
-
 import asyncio
 from datetime import timedelta
 import logging
@@ -124,7 +123,7 @@ class RS485CurtainCover(CoverEntity):
                 if self._publisher.is_running and self._watching:
                     await asyncio.wait_for(
                         self._publisher.send_message(
-                            b"\x00\x8c\x00\x00\x00\x06\x55"
+                            b"\x00\x8C\x00\x00\x00\x06\x55"
                             + self._slave_bytes
                             + b"\x01\x02\x01"
                         ),
@@ -136,15 +135,24 @@ class RS485CurtainCover(CoverEntity):
             return
 
     async def _subscribe_callback(self, sub_id: str, data: tuple[int]) -> None:
-        if sub_id != self._unique_id or len(data) < 12 or data[1] != 140:
+        if sub_id != self._unique_id:
             return
 
-        high_byte, low_byte = data[7:9][::-1]
+        # 确保数据长度足够
+        if len(data) < 12:
+            _LOGGER.error("Received data too short: %s", data)
+            return
+
+        if data[1] != 140:  # type: ignore[misc]
+            _LOGGER.error("Unexpected data format: %s", data)
+            return
+
+        high_byte, low_byte = data[7:9][::-1]  # type: ignore[misc]
         _slave = (high_byte << 8) | low_byte
 
-        _LOGGER.info("📡 Curtain Received data: %s %s 📡", data)
+        _LOGGER.info("📡 Curtain Received data: %s %s 📡", data, self._moving)
         if _slave == self._slave:
-            data_length = data[5]
+            data_length = data[5]  # type: ignore[misc]
             position = self._position
             if data_length == 6:
                 position = 100 - data[-1:][0]
@@ -187,7 +195,7 @@ class RS485CurtainCover(CoverEntity):
         if not self._watching:
             _LOGGER.info("Updating the curtain %s")
             await self._publisher.send_message(
-                b"\x00\x8c\x00\x00\x00\x06\x55" + self._slave_bytes + b"\x01\x02\x01"
+                b"\x00\x8C\x00\x00\x00\x06\x55" + self._slave_bytes + b"\x01\x02\x01"
             )
             self.schedule_update_ha_state()
 
@@ -195,7 +203,7 @@ class RS485CurtainCover(CoverEntity):
         """停止窗簾."""
         _LOGGER.info("Stopping the curtain")
         await self._publisher.send_message(
-            b"\x00\x8c\x00\x00\x00\x05\x55" + self._slave_bytes + b"\x03\x03"
+            b"\x00\x8C\x00\x00\x00\x05\x55" + self._slave_bytes + b"\x03\x03"
         )
         await asyncio.sleep(1)
         self._moving = False
@@ -206,7 +214,7 @@ class RS485CurtainCover(CoverEntity):
         """關閉窗簾."""
         _LOGGER.info("Closing the curtain")
         await self._publisher.send_message(
-            b"\x00\x8c\x00\x00\x00\x05\x55" + self._slave_bytes + b"\x03\x01"
+            b"\x00\x8C\x00\x00\x00\x05\x55" + self._slave_bytes + b"\x03\x01"
         )
         await asyncio.sleep(1)
         self._is_open = True
@@ -218,7 +226,7 @@ class RS485CurtainCover(CoverEntity):
         """打開窗簾."""
         _LOGGER.info("Opening the curtain")
         await self._publisher.send_message(
-            b"\x00\x8c\x00\x00\x00\x05\x55" + self._slave_bytes + b"\x03\x02"
+            b"\x00\x8C\x00\x00\x00\x05\x55" + self._slave_bytes + b"\x03\x02"
         )
         await asyncio.sleep(1)
         self._is_open = False
@@ -232,7 +240,7 @@ class RS485CurtainCover(CoverEntity):
             position = kwargs[ATTR_POSITION]
             _LOGGER.info("Setting the curtain position to %s", position)
             await self._publisher.send_message(
-                b"\x00\x8c\x00\x00\x00\x06\x55"
+                b"\x00\x8C\x00\x00\x00\x06\x55"
                 + self._slave_bytes
                 + b"\x03\x04"
                 + bytes([100 - position])

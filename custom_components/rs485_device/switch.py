@@ -177,7 +177,9 @@ class RS485Switch(SwitchEntity):
     async def _subscribe_callback(self, sub_id: str, data: tuple[int]) -> None:
         """訂閱回調."""
 
-        if data[1] == 140 or len(data) < 8:
+        if len(data) < 8:
+            return
+        if data[1] == 140 and data[6] == 85:
             return
 
         _length, slave, function_code, *_last = data[5:]
