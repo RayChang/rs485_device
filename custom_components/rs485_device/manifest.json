@@ -1,7 +1,7 @@
 {
   "domain": "rs485_device",
   "name": "RS-485 Device",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "codeowners": ["@RayChang"],
   "config_flow": true,
   "dependencies": [],
