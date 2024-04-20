@@ -232,9 +232,10 @@ class RS485Switch(SwitchEntity):
                     # step_3-6
                     # 如果是按下實體按鈕，則讀取狀態，會進入到 step_3-5
                     elif length == 6:
-                        await self._publisher.read_register(
-                            self._slave, REGISTER_ADDRESS, 1
+                        read_message = self._construct_modbus_message(
+                            self._slave, 3, REGISTER_ADDRESS, length=1
                         )
+                        await self._publisher.send_message(read_message)
                 # 如果是寫入寄存器，則將更新後的狀態更新到 DOMAIN 裡提供給其他開關使用
                 elif function_code == 6:
                     self.hass.data[DOMAIN][self._entry_id][

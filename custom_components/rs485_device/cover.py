@@ -1,4 +1,5 @@
 """RS485 Curtain component."""
+
 import asyncio
 from datetime import timedelta
 import logging
@@ -21,7 +22,7 @@ from .rs485_tcp_publisher import RS485TcpPublisher
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = timedelta(seconds=20)
+SCAN_INTERVAL = timedelta(seconds=5)
 
 START_CODE: Final = 0x55  # 起始碼
 READ_CMD: Final = 0x01  # 讀命令
@@ -56,14 +57,15 @@ class RS485CurtainCover(CoverEntity):
     def __init__(self, hass: HomeAssistant, config: dict[str, Any]) -> None:
         """初始化窗帘 cover 实体."""
         self.hass = hass
-        self._is_open = False
+        self._is_open: bool = False
         self._slave: int = config.get(CONF_SLAVE, 0)
-        self._slave_bytes: int = self._slave.to_bytes(2, byteorder="big")
+        self._slave_bytes: bytes = self._slave.to_bytes(2, byteorder="big")
         self._entry_id: str = config.get("entry_id", "")
-        # self._name: str = f"{config.get(CONF_NAME)}"
+        self._moving: bool = False
         self._unique_id: str = f"{self._entry_id}"
-        self._position = 100  # 完全打开
-        self._watching = True
+        self._position: int = 100
+        self._destination: int = 100
+        self._watching: bool = True
         self._publisher: RS485TcpPublisher = self.hass.data[DOMAIN][
             "rs485_tcp_publisher"
         ]
@@ -122,7 +124,7 @@ class RS485CurtainCover(CoverEntity):
                 if self._publisher.is_running and self._watching:
                     await asyncio.wait_for(
                         self._publisher.send_message(
-                            b"\x00\x8C\x00\x00\x00\x06\x55"
+                            b"\x00\x8c\x00\x00\x00\x06\x55"
                             + self._slave_bytes
                             + b"\x01\x02\x01"
                         ),
@@ -136,9 +138,11 @@ class RS485CurtainCover(CoverEntity):
     async def _subscribe_callback(self, sub_id: str, data: tuple[int]) -> None:
         if sub_id != self._unique_id or len(data) < 12 or data[1] != 140:
             return
-        high_byte, low_byte = data[7:-3][::-1]
+
+        high_byte, low_byte = data[7:9][::-1]
         _slave = (high_byte << 8) | low_byte
-        _LOGGER.info("data: %s", _slave)
+
+        _LOGGER.info("📡 Curtain Received data: %s %s 📡", data)
         if _slave == self._slave:
             data_length = data[5]
             position = self._position
@@ -148,12 +152,15 @@ class RS485CurtainCover(CoverEntity):
                 position = data[-1:][0]
 
             if position != self._position:
-                self._position = position
+                if self._moving:
+                    self._position = self._destination
+                else:
+                    self._position = position
             else:
                 self._watching = False
+                self._moving = False
 
             self.async_write_ha_state()
-            _LOGGER.info("📡 Curtain Received data: %s 📡", data)
 
     async def async_added_to_hass(self):
         """當實體添加到 Home Assistant 時，設置狀態更新的計劃."""
@@ -180,7 +187,7 @@ class RS485CurtainCover(CoverEntity):
         if not self._watching:
             _LOGGER.info("Updating the curtain %s")
             await self._publisher.send_message(
-                b"\x00\x8C\x00\x00\x00\x06\x55" + self._slave_bytes + b"\x01\x02\x01"
+                b"\x00\x8c\x00\x00\x00\x06\x55" + self._slave_bytes + b"\x01\x02\x01"
             )
             self.schedule_update_ha_state()
 
@@ -188,9 +195,10 @@ class RS485CurtainCover(CoverEntity):
         """停止窗簾."""
         _LOGGER.info("Stopping the curtain")
         await self._publisher.send_message(
-            b"\x00\x8C\x00\x00\x00\x05\x55" + self._slave_bytes + b"\x03\x03"
+            b"\x00\x8c\x00\x00\x00\x05\x55" + self._slave_bytes + b"\x03\x03"
         )
         await asyncio.sleep(1)
+        self._moving = False
         self._watching = True
         self.schedule_update_ha_state()
 
@@ -198,10 +206,11 @@ class RS485CurtainCover(CoverEntity):
         """關閉窗簾."""
         _LOGGER.info("Closing the curtain")
         await self._publisher.send_message(
-            b"\x00\x8C\x00\x00\x00\x05\x55" + self._slave_bytes + b"\x03\x01"
+            b"\x00\x8c\x00\x00\x00\x05\x55" + self._slave_bytes + b"\x03\x01"
         )
         await asyncio.sleep(1)
         self._is_open = True
+        self._moving = False
         self._position = 0
         self.schedule_update_ha_state()
 
@@ -209,10 +218,11 @@ class RS485CurtainCover(CoverEntity):
         """打開窗簾."""
         _LOGGER.info("Opening the curtain")
         await self._publisher.send_message(
-            b"\x00\x8C\x00\x00\x00\x05\x55" + self._slave_bytes + b"\x03\x02"
+            b"\x00\x8c\x00\x00\x00\x05\x55" + self._slave_bytes + b"\x03\x02"
         )
         await asyncio.sleep(1)
         self._is_open = False
+        self._moving = False
         self._position = 100
         self.schedule_update_ha_state()
 
@@ -222,12 +232,14 @@ class RS485CurtainCover(CoverEntity):
             position = kwargs[ATTR_POSITION]
             _LOGGER.info("Setting the curtain position to %s", position)
             await self._publisher.send_message(
-                b"\x00\x8C\x00\x00\x00\x06\x55"
+                b"\x00\x8c\x00\x00\x00\x06\x55"
                 + self._slave_bytes
                 + b"\x03\x04"
                 + bytes([100 - position])
             )
             await asyncio.sleep(1)
+            self._moving = True
             self._position = position
+            self._destination = position
             self._is_open = position > 0
             self.schedule_update_ha_state()
