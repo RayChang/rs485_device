@@ -13,7 +13,8 @@
           "name": "[%key:common::config_flow::data::name%]",
           "slave": "slave",
           "count": "count",
-          "has_relay": "has_relay"
+          "has_relay": "has_relay",
+          "sensors_model": "sensors_model"
         }
       }
     },

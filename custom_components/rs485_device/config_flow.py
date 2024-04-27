@@ -15,13 +15,22 @@ from homeassistant.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PORT,
+    CONF_SENSORS,
     CONF_SLAVE,
     CONF_SWITCHES,
 )
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import async_generate_entity_id
 
-from .const import DEFAULT_NAME, DEVICE_TYPE, DOMAIN, HAS_RELAY, KEY_COUNT
+from .const import (
+    DEFAULT_NAME,
+    DEVICE_TYPE,
+    DOMAIN,
+    HAS_RELAY,
+    KEY_COUNT,
+    SENSOR_MODEL,
+    SENSORS_MODEL,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,6 +46,10 @@ STEP_SWITCH_CONFIG_SCHEMA = {
     vol.Required(CONF_SLAVE, default=1): cv.positive_int,
     vol.Required(CONF_COUNT, default=1): vol.In(KEY_COUNT),
     vol.Required(HAS_RELAY, default=True): cv.boolean,
+}
+
+STEP_SENSOR_CONFIG_SCHEMA = {
+    vol.Required(SENSORS_MODEL): vol.In(SENSOR_MODEL),
 }
 
 
@@ -98,6 +111,8 @@ class RS485DeviceConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if device_type == CONF_SWITCHES:
             schema.update(STEP_SWITCH_CONFIG_SCHEMA)
+        elif device_type == CONF_SENSORS:
+            schema.update(STEP_SENSOR_CONFIG_SCHEMA)
 
         return self.async_show_form(
             step_id="device_config",

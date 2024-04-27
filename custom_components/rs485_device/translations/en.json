@@ -14,6 +14,7 @@
                     "count": "count",
                     "has_relay": "has_relay",
                     "name": "Name",
+                    "sensors_model": "sensors_model",
                     "slave": "slave"
                 }
             },

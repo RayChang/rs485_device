@@ -21,6 +21,8 @@ KEY_COUNT: Final = list(range(1, 7))
 # 含有繼電器
 HAS_RELAY: Final = "has_relay"
 
+SENSORS_MODEL: Final = "sensors_model"
+
 # 設備類型
 DEVICE_TYPE: Final = {
     CONF_SWITCHES: CONF_SWITCHES,
