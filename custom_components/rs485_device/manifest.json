@@ -1,7 +1,7 @@
 {
   "domain": "rs485_device",
   "name": "RS-485 Device",
-  "version": "1.0.2404271",
+  "version": "1.0.2404291",
   "codeowners": ["@RayChang"],
   "config_flow": true,
   "dependencies": [],
@@ -9,7 +9,7 @@
   "documentation": "https://github.com/RayChang/rs485_device",
   "homekit": {},
   "iot_class": "local_push",
-  "requirements": ["pymodbus==3.6.5"],
+  "requirements": [],
   "ssdp": [],
   "zeroconf": []
 }

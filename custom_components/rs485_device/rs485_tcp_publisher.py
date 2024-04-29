@@ -36,37 +36,38 @@ class RS485TcpPublisher:
         """返回 self.subscribers 的長度作为属性."""
         return len(self.subscribers)
 
-    # def _construct_modbus_message(
-    #     self,
-    #     slave: int,
-    #     function_code: int,
-    #     register: int,
-    #     value: int | None = None,
-    #     length: int | None = None,
-    # ) -> bytes:
-    #     """Modbus TCP Message."""
-    #     header = b"\x00\x00\x00\x00\x00\x06" + bytes([slave])
-    #     func_code = bytes([function_code])
-    #     register_high = register >> 8
-    #     register_low = register & 0xFF
+    def construct_modbus_message(
+        self,
+        slave: int,
+        function_code: int,
+        register: int,
+        value: int | None = None,
+        length: int | None = None,
+        identify: int = 0,
+    ) -> bytes:
+        """Modbus TCP Message."""
+        header = b"\x00" + bytes([identify]) + b"\x00\x00\x00\x06" + bytes([slave])
+        func_code = bytes([function_code])
+        register_high = register >> 8
+        register_low = register & 0xFF
 
-    #     if function_code in (3, 4) and length is not None:  # 讀取寄存器，需要長度參數
-    #         length_high = length >> 8
-    #         length_low = length & 0xFF
-    #         message = (
-    #             header
-    #             + func_code
-    #             + bytes([register_high, register_low, length_high, length_low])
-    #         )
-    #     elif function_code == 6 and value is not None:  # 寫單個寄存器，需要值參數
-    #         value_high = value >> 8
-    #         value_low = value & 0xFF
-    #         message = (
-    #             header
-    #             + func_code
-    #             + bytes([register_high, register_low, value_high, value_low])
-    #         )
-    #     return message
+        if function_code in (3, 4) and length is not None:  # 讀取寄存器，需要長度參數
+            length_high = length >> 8
+            length_low = length & 0xFF
+            message = (
+                header
+                + func_code
+                + bytes([register_high, register_low, length_high, length_low])
+            )
+        elif function_code == 6 and value is not None:  # 寫單個寄存器，需要值參數
+            value_high = value >> 8
+            value_low = value & 0xFF
+            message = (
+                header
+                + func_code
+                + bytes([register_high, register_low, value_high, value_low])
+            )
+        return message
 
     async def subscribe(self, callback, callback_id=None) -> None:
         """訂閱數據，必須提供 ID."""

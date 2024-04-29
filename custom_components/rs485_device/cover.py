@@ -68,6 +68,8 @@ class RS485CurtainCover(CoverEntity):
         self._publisher: RS485TcpPublisher = self.hass.data[DOMAIN][
             "rs485_tcp_publisher"
         ]
+        self._identify_set: set[int] = self.hass.data[DOMAIN]["identify"]
+        self._slaves_set: set[int] = self.hass.data[DOMAIN]["slaves"]
         self._watchdog_task = self.hass.data[DOMAIN][self._entry_id]["watchdog_task"]
 
     @property
@@ -178,6 +180,8 @@ class RS485CurtainCover(CoverEntity):
         # 設置 watchdog 任務
         if self._watchdog_task is None:
             self._watchdog_task = asyncio.create_task(self._watchdogs())
+        self._identify_set.add(140)
+        self._slaves_set.add(85)
 
     async def async_will_remove_from_hass(self):
         """當實體從 Home Assistant 中移除時，取消計劃."""

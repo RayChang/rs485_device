@@ -19,13 +19,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 
 from .const import CURTAIN_MODEL, DOMAIN, SENSORS_MODEL, SWITCH_MODEL
-from .modbus_client import ModbusClient
 from .rs485_tcp_publisher import RS485TcpPublisher
 
 PLATFORMS: dict[str, list[Platform]] = {
     CONF_SWITCHES: [Platform.SWITCH],
     CONF_COVERS: [Platform.COVER],
-    CONF_SENSORS: [Platform.SENSOR, Platform.BINARY_SENSOR],
+    CONF_SENSORS: [Platform.BINARY_SENSOR, Platform.SENSOR],
 }
 
 
@@ -51,6 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _model = CURTAIN_MODEL
     elif device_type == CONF_SENSORS:
         _model = entry.data[SENSORS_MODEL]
+        _domain_data.update({CONF_STATE: None})
 
     # 在裝置註冊表中創建一個新的裝置
     device = device_registry.async_get_or_create(
@@ -64,11 +64,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         DOMAIN,
         {
             "rs485_tcp_publisher": RS485TcpPublisher(
-                host=entry.data[CONF_HOST], port=entry.data[CONF_PORT], byte_length=12
+                host=entry.data[CONF_HOST], port=entry.data[CONF_PORT], byte_length=64
             ),
-            "modbus_client": ModbusClient(
-                host=entry.data[CONF_HOST], port=entry.data[CONF_PORT]
-            ),
+            "identify": set(),
+            "slaves": set(),
         },
     )
     hass.data[DOMAIN][entry.entry_id] = {CONF_DEVICE: device, **_domain_data}

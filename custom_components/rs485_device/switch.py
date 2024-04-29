@@ -60,10 +60,13 @@ class RS485Switch(SwitchEntity):
         self._entry_id: str = config.get("entry_id", "")
         self._index: int = switch_index
         self._name: str = f"Button_{self._index}"
+        self._identify = int(str(self._slave) + str(self._index))
         self._unique_id: str = f"{self._entry_id}_{self._index}"
         self._publisher: RS485TcpPublisher = self.hass.data[DOMAIN][
             "rs485_tcp_publisher"
         ]
+        self._identify_set: set[int] = self.hass.data[DOMAIN]["identify"]
+        self._slaves_set: set[int] = self.hass.data[DOMAIN]["slaves"]
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -99,42 +102,10 @@ class RS485Switch(SwitchEntity):
         result = (high_byte << 8) + (low_byte & 0xFF)
         return result
 
-    def _construct_modbus_message(
-        self,
-        slave: int,
-        function_code: int,
-        register: int,
-        value: int | None = None,
-        length: int | None = None,
-    ) -> bytes:
-        """Modbus TCP Message."""
-        header = b"\x00\x00\x00\x00\x00\x06" + bytes([slave])
-        func_code = bytes([function_code])
-        register_high = register >> 8
-        register_low = register & 0xFF
-
-        if function_code in (3, 4) and length is not None:  # 讀取寄存器，需要長度參數
-            length_high = length >> 8
-            length_low = length & 0xFF
-            message = (
-                header
-                + func_code
-                + bytes([register_high, register_low, length_high, length_low])
-            )
-        elif function_code == 6 and value is not None:  # 寫單個寄存器，需要值參數
-            value_high = value >> 8
-            value_low = value & 0xFF
-            message = (
-                header
-                + func_code
-                + bytes([register_high, register_low, value_high, value_low])
-            )
-        return message
-
     async def _watchdogs(self):
         """監控 Publisher 是否運行."""
-        read_message = self._construct_modbus_message(
-            self._slave, 3, REGISTER_ADDRESS, length=1
+        read_message = self._publisher.construct_modbus_message(
+            self._slave, 3, REGISTER_ADDRESS, length=1, identify=self._identify
         )
         watchdog_task: asyncio.Task = self.hass.data[DOMAIN][self._entry_id][
             "watchdog_task"
@@ -159,15 +130,15 @@ class RS485Switch(SwitchEntity):
     async def _handle_switch(self, is_on: bool) -> None:
         """處理開關的切換."""
         self.hass.data[DOMAIN][self._entry_id][CONF_SWITCHES] = self._index
-        read_message = self._construct_modbus_message(
-            self._slave, 3, REGISTER_ADDRESS, length=1
+        read_message = self._publisher.construct_modbus_message(
+            self._slave, 3, REGISTER_ADDRESS, length=1, identify=self._identify
         )
         await self._publisher.send_message(read_message)
         await asyncio.sleep(0.1)
         state = self.hass.data[DOMAIN][self._entry_id][CONF_STATE]
         value = state ^ self._index
-        write_message = self._construct_modbus_message(
-            self._slave, 6, REGISTER_ADDRESS, value=value
+        write_message = self._publisher.construct_modbus_message(
+            self._slave, 6, REGISTER_ADDRESS, value=value, identify=self._identify
         )
         await self._publisher.send_message(write_message)
         self.hass.data[DOMAIN][self._entry_id][CONF_STATE] = value
@@ -179,7 +150,9 @@ class RS485Switch(SwitchEntity):
 
         if len(data) < 8:
             return
-        if data[1] == 140 and data[6] == 85:
+        identify: set[int] = self._identify_set - {self._identify}
+        slaves: set[int] = self._slaves_set - {self._slave}
+        if data[1] in identify and data[6] in slaves:
             return
 
         _length, slave, function_code, *_last = data[5:]
@@ -234,8 +207,12 @@ class RS485Switch(SwitchEntity):
                     # step_3-6
                     # 如果是按下實體按鈕，則讀取狀態，會進入到 step_3-5
                     elif length == 6:
-                        read_message = self._construct_modbus_message(
-                            self._slave, 3, REGISTER_ADDRESS, length=1
+                        read_message = self._publisher.construct_modbus_message(
+                            self._slave,
+                            3,
+                            REGISTER_ADDRESS,
+                            length=1,
+                            identify=self._identify,
                         )
                         await self._publisher.send_message(read_message)
                 # 如果是寫入寄存器，則將更新後的狀態更新到 DOMAIN 裡提供給其他開關使用
@@ -265,6 +242,8 @@ class RS485Switch(SwitchEntity):
             self.hass.data[DOMAIN][self._entry_id][
                 "watchdog_task"
             ] = asyncio.create_task(self._watchdogs())
+        self._identify_set.add(self._identify)
+        self._slaves_set.add(self._slave)
         # 設置狀態更新的計劃
         _LOGGER.info("🚧 Added to hass 🚧 %s", self._index)
 
